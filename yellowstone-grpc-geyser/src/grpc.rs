@@ -732,9 +732,9 @@ impl GrpcService {
                                 }
                             };
 
-                            // processed
+                            // processed, send the message immediately
                             let _ =
-                                broadcast_tx.send((CommitmentLevel::Processed, message.clone()));
+                                broadcast_tx.send((CommitmentLevel::Processed, Arc::new(vec![(msgid, message.clone())])));
 
                             // confirmed
                             confirmed_messages.push(message.clone());
@@ -765,8 +765,9 @@ impl GrpcService {
 
                             if !confirmed_messages.is_empty() || !finalized_messages.is_empty()
                             {
+                                // send the message immediately
                                 let _ = broadcast_tx
-                                    .send((CommitmentLevel::Processed, message.clone()));
+                                    .send((CommitmentLevel::Processed, Arc::new(vec![(msgid, message.clone())])));
                             }
 
                             if !confirmed_messages.is_empty() {
