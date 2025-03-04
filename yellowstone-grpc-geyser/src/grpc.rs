@@ -589,6 +589,12 @@ impl GrpcService {
                                 }
                             }
                         }
+
+                        Message::Transaction(msg) if msg.transaction.status == TransactionStatus::Processed => {
+                            // if the transaction is processed, we need to send it to the client immediately
+                            let _ = broadcast_tx.send((CommitmentLevel::Processed, vec![(msgid, message.clone())].into()));
+                            continue;
+                        }
                         _ => {}
                     }
 
