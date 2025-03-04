@@ -510,15 +510,9 @@ impl GrpcService {
         replay_stored_slots_rx: Option<mpsc::Receiver<ReplayStoredSlotsRequest>>,
         replay_stored_slots: u64,
     ) {
-        const PROCESSED_MESSAGES_MAX: usize = 31;
-        const PROCESSED_MESSAGES_SLEEP: Duration = Duration::from_millis(10);
-
         let mut msgid_gen = MessageId::default();
         let mut messages: BTreeMap<u64, SlotMessages> = Default::default();
-        let mut processed_messages = Vec::with_capacity(PROCESSED_MESSAGES_MAX);
         let mut processed_first_slot = None;
-        let processed_sleep = sleep(PROCESSED_MESSAGES_SLEEP);
-        tokio::pin!(processed_sleep);
         let (_tx, rx) = mpsc::channel(1);
         let mut replay_stored_slots_rx = replay_stored_slots_rx.unwrap_or(rx);
 
@@ -637,11 +631,7 @@ impl GrpcService {
                         }
                         Message::Transaction(msg) => {
                             slot_messages.transactions.push(Arc::clone(&msg.transaction));
-                            if let Some(sealed_msg) = slot_messages.try_seal(&mut msgid_gen) {
-                                // if the transaction is processed, we need to send it to the client immediately
-                                let _ = broadcast_tx.send((CommitmentLevel::Processed, vec![(msgid, sealed_msg)].into()));
-                                continue;
-                            }
+                            sealed_block_msg = slot_messages.try_seal(&mut msgid_gen);
                         }
                         // Dedup accounts by max write_version
                         Message::Account(msg) => {
@@ -743,13 +733,8 @@ impl GrpcService {
                             };
 
                             // processed
-                            processed_messages.push(message.clone());
                             let _ =
-                                broadcast_tx.send((CommitmentLevel::Processed, processed_messages.into()));
-                            processed_messages = Vec::with_capacity(PROCESSED_MESSAGES_MAX);
-                            processed_sleep
-                                .as_mut()
-                                .reset(Instant::now() + PROCESSED_MESSAGES_SLEEP);
+                                broadcast_tx.send((CommitmentLevel::Processed, message.clone()));
 
                             // confirmed
                             confirmed_messages.push(message.clone());
@@ -778,17 +763,10 @@ impl GrpcService {
                                 }
                             }
 
-                            processed_messages.push(message);
-                            if processed_messages.len() >= PROCESSED_MESSAGES_MAX
-                                || !confirmed_messages.is_empty()
-                                || !finalized_messages.is_empty()
+                            if !confirmed_messages.is_empty() || !finalized_messages.is_empty()
                             {
                                 let _ = broadcast_tx
-                                    .send((CommitmentLevel::Processed, processed_messages.into()));
-                                processed_messages = Vec::with_capacity(PROCESSED_MESSAGES_MAX);
-                                processed_sleep
-                                    .as_mut()
-                                    .reset(Instant::now() + PROCESSED_MESSAGES_SLEEP);
+                                    .send((CommitmentLevel::Processed, message.clone()));
                             }
 
                             if !confirmed_messages.is_empty() {
@@ -802,13 +780,6 @@ impl GrpcService {
                             }
                         }
                     }
-                }
-                () = &mut processed_sleep => {
-                    if !processed_messages.is_empty() {
-                        let _ = broadcast_tx.send((CommitmentLevel::Processed, processed_messages.into()));
-                        processed_messages = Vec::with_capacity(PROCESSED_MESSAGES_MAX);
-                    }
-                    processed_sleep.as_mut().reset(Instant::now() + PROCESSED_MESSAGES_SLEEP);
                 }
                 Some((commitment, replay_slot, tx)) = replay_stored_slots_rx.recv() => {
                     if let Some((slot, _)) = messages.first_key_value() {
