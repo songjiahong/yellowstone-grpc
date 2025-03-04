@@ -9,10 +9,7 @@
   },
   "grpc": {
     "address": "0.0.0.0:10000",
-    "tls_config": {
-      "cert_path": "",
-      "key_path": ""
-    },
+    "tls_config": null,
     "compression": {
       "accept": ["gzip", "zstd"],
       "send": ["gzip", "zstd"]
