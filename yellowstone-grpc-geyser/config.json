@@ -34,9 +34,9 @@
       "accounts": {
         "max": 1,
         "any": false,
-        "account_max": 10,
+        "account_max": 99999,
         "account_reject": ["TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"],
-        "owner_max": 10,
+        "owner_max": 99999,
         "owner_reject": ["11111111111111111111111111111111"],
         "data_slice_max": 2
       },
@@ -46,22 +46,22 @@
       "transactions": {
         "max": 1,
         "any": false,
-        "account_include_max": 10,
+        "account_include_max": 99999,
         "account_include_reject": [
           "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
         ],
-        "account_exclude_max": 10,
-        "account_required_max": 10
+        "account_exclude_max": 99999,
+        "account_required_max": 99999
       },
       "transactions_status": {
         "max": 1,
         "any": false,
-        "account_include_max": 10,
+        "account_include_max": 99999,
         "account_include_reject": [
           "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
         ],
-        "account_exclude_max": 10,
-        "account_required_max": 10
+        "account_exclude_max": 99999,
+        "account_required_max": 99999
       },
       "blocks": {
         "max": 1,
